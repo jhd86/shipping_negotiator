@@ -30,6 +30,7 @@ shipping_negotiator/
 │   ├── email_parser.py      # Functions for parsing incoming quote emails
 │   ├── negotiation.py       # Functions for sending negotiation requests
 │   └── ml_model.py          # Machine learning model training and prediction
+│   └── config.py            # Template for configuration settings - FILL THIS OUT
 │
 ├── models/                  # Trained ML models (created at runtime)
 ├── emails/                  # (Optional) For storing email templates or logs
@@ -63,24 +64,45 @@ shipping_negotiator/
 
 ## Usage
 
-- **Run the main process:**
+- **Running the program:**
+  Set up the front end:
   ```bash
-  python main.py
+  # Navigate to your project directory
+  cd /path/to/shipping_negotiator
+
+  # Activate your virtual environment
+  source venv/bin/activate
+
+  # Run the Streamlit app
+  python -m streamlit run app.py
   ```
-  This will prompt for shipment details, request quotes, wait for replies, and initiate negotiations.
+
+  In a seperate terminal window, run the backend:
+  ```bash
+  # Navigate to your project directory
+  cd /path/to/shipping_negotiator
+
+  # Activate your virtual environment
+  source venv/bin/activate
+
+  # Run the backend server
+  python worker.py
+  ```
+
+
 
 - **Reset the database:**
   ```bash
   python reset_database.py
   ```
 
-- **Train machine learning models:**
+- **IN PROGRESS: Train machine learning models:**
   Edit and run the relevant functions in `src/ml_model.py` to train models for each carrier using your data.
 
 ## Configuration
 
-- **Carriers:** Edit the `CARRIERS` dictionary in `main.py` to add or modify carriers and their contact methods.
-- **Email Credentials:** Update the sender email and password in `src/quoting.py`, `src/email_parser.py`, and `src/negotiation.py` with your own (use app passwords for Gmail/Outlook).
+- **Carriers:** Edit the `CARRIERS` dictionary in `config.py` to add or modify carriers and their contact methods.
+- **Email Credentials:** Update SENDER_EMAIL, SENDER_PASSWORD in `config.py` with your own (use app passwords for Gmail/Outlook). Update IMAP_SERVER and SMTP_SERVER with server addresses that correspond to your email provider (gmail is imap.gmail.com, smtp.gmail.com).
 - **Polling Intervals:** Adjust `POLLING_INTERVAL_SECONDS` and `POLLING_TIMEOUT_MINUTES` in `main.py` as needed.
 
 ## How It Works
@@ -94,4 +116,4 @@ shipping_negotiator/
 
 ## Security Note
 
-- **Credentials:** Do not commit real email credentials to version control. Use environment variables or a config file for sensitive information in production.
+- **Credentials:** Do not commit real email credentials to version control. Use 'config.py' and '.gitignore' for sensitive information in production.
