@@ -53,16 +53,39 @@ conn.close()
 if shipments_df.empty:
     st.warning("No shipments found. Log a new shipment to get started.")
 else:
-    # MODIFIED: Removed the unsupported argument
     st.dataframe(shipments_df)
 
     selected_id = st.selectbox("Select a Shipment ID to see details:", shipments_df['shipment_id'])
     if selected_id:
         st.subheader(f"Quotes for Shipment #{selected_id}")
-        details_df = quotes_df[quotes_df['shipment_id'] == selected_id]
 
+        # --- Display Quotes Table ---
+        details_df = quotes_df[quotes_df['shipment_id'] == int(selected_id)] # Ensure ID is int
         if details_df.empty:
             st.info("No quotes yet for this shipment.")
         else:
-            # MODIFIED: Removed the unsupported argument
             st.dataframe(details_df)
+
+        # --- Add Email Preview Section ---
+        st.subheader("Email Previews")
+
+        # Import the generator functions
+        from src.email_utils import generate_quote_request_content, generate_negotiation_content
+
+        # Get the shipment details for the selected ID from the main dataframe
+        shipment_info = shipments_df[shipments_df['shipment_id'] == int(selected_id)].iloc[0].to_dict()
+
+        # Generate and display the initial quote request email
+        st.markdown("#### Initial Quote Request Email")
+        initial_content = generate_quote_request_content(shipment_info)
+        st.text_input("Subject", initial_content['subject'], disabled=True)
+        st.text_area("Body", initial_content['body'], height=250, disabled=True)
+
+        # Check if there's a low bid to generate a negotiation email
+        initial_quotes = details_df[(details_df['quote_type'] == 'initial') & (details_df['price'].notna())]
+        if not initial_quotes.empty:
+            lowest_bid = initial_quotes['price'].min()
+            st.markdown("#### Negotiation Email")
+            negotiation_content = generate_negotiation_content(selected_id, lowest_bid)
+            st.text_input("Subject ", negotiation_content['subject'], disabled=True) # Space in label is a hack for unique key
+            st.text_area("Body ", negotiation_content['body'], height=250, disabled=True) # Space in label is a hack for unique key
