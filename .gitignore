@@ -9,7 +9,7 @@ venv/
 src/config.py
 
 # Data
-data/shipping_quotes.db
+data/
 
 # Not used
 main.py
