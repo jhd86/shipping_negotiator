@@ -134,7 +134,7 @@ def worker_loop():
             # Task 3: Find shipments ready to be advanced to the negotiation stage
             advance_to_negotiation(conn)
 
-            # Task 4: Find and complete finished negotiations (NEW)
+            # Task 4: Find and complete finished negotiations
             complete_shipments(conn)
 
             conn.close()

@@ -11,7 +11,7 @@ st.set_page_config(page_title="Shipping Negotiator", layout="wide")
 def get_db_connection():
     return sqlite3.connect(DB_PATH)
 
-st.title("🚚 Shipping Negotiator Dashboard")
+st.title("🚚 Shipping Quotes Dashboard")
 
 # --- Form to Add New Shipments ---
 st.header("Log a New Shipment")

@@ -16,7 +16,8 @@ A Python system for automating the process of collecting, negotiating, and analy
 ```
 shipping_negotiator/
 │
-├── main.py                  # Orchestrates the end-to-end quoting and negotiation process
+├── worker.py                # Orchestrates the end-to-end quoting and negotiation process
+├── app.py                   # Dashboard for tracking shipments and negotiations
 ├── generate_sample_data.py  # Script to generate synthetic shipment and quote data
 ├── reset_database.py        # Utility to reset the database
 ├── sample_shipment_data.csv # Example generated data
@@ -29,7 +30,7 @@ shipping_negotiator/
 │   ├── quoting.py           # Functions for sending quote requests (API/email)
 │   ├── email_parser.py      # Functions for parsing incoming quote emails
 │   ├── negotiation.py       # Functions for sending negotiation requests
-│   └── ml_model.py          # Machine learning model training and prediction
+│   ├── ml_model.py          # Machine learning model training and prediction
 │   └── config.py            # Template for configuration settings - FILL THIS OUT
 │
 ├── models/                  # Trained ML models (created at runtime)
@@ -85,29 +86,29 @@ shipping_negotiator/
   # Activate your virtual environment
   source venv/bin/activate
 
-  # Run the backend server
+  # Run the worker script
   python worker.py
   ```
 
 
 
-- **Reset the database:**
+- **Reset the database (Utility):**
   ```bash
   python reset_database.py
   ```
 
-- **IN PROGRESS: Train machine learning models:**
+- **(IN PROGRESS) Train machine learning models:**
   Edit and run the relevant functions in `src/ml_model.py` to train models for each carrier using your data.
 
 ## Configuration
 
 - **Carriers:** Edit the `CARRIERS` dictionary in `config.py` to add or modify carriers and their contact methods.
-- **Email Credentials:** Update SENDER_EMAIL, SENDER_PASSWORD in `config.py` with your own (use app passwords for Gmail/Outlook). Update IMAP_SERVER and SMTP_SERVER with server addresses that correspond to your email provider (gmail is imap.gmail.com, smtp.gmail.com).
+- **Email Credentials:** Update `SENDER_EMAIL`, `SENDER_PASSWORD` in `config.py` with your own (use app passwords for Gmail/Outlook). Update `IMAP_SERVER` and `SMTP_SERVER with server addresses that correspond to your email provider (gmail is imap.gmail.com, smtp.gmail.com).
 - **Polling Intervals:** Adjust `POLLING_INTERVAL_SECONDS` and `POLLING_TIMEOUT_MINUTES` in `main.py` as needed.
 
 ## How It Works
 
-1. **Shipment Entry:** User provides shipment details.
+1. **Shipment Entry:** User provides shipment details via web application.
 2. **Quote Requests:** System logs the shipment and requests quotes from all configured carriers.
 3. **Email/API Handling:** Waits for and parses incoming quotes (via email or API).
 4. **Negotiation:** Identifies the lowest bid and asks other carriers to beat it.
