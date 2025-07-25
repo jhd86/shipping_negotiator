@@ -1,13 +1,10 @@
 import smtplib
 from email.message import EmailMessage
+from src.config import SENDER_EMAIL, SENDER_PASSWORD
 
 def send_negotiation_request(carrier_email, shipment_id, lowest_bid):
     """Sends an email asking a carrier to beat a competing price."""
     print(f"Sending negotiation email to {carrier_email} for shipment {shipment_id}...")
-
-    # NOTE: Ensure these credentials are correct
-    SENDER_EMAIL = "your_email@example.com"
-    SENDER_PASSWORD = "your_password"
 
     subject = f"Final Offer Request - Shipment #{shipment_id}"
     body = f"""

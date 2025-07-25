@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environment
+venv/
+
+# Secrets - DO NOT COMMIT
+src/config.py
+
+# Data
+data/shipping_quotes.db

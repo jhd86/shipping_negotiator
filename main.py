@@ -7,16 +7,10 @@ from src.database_setup import DB_PATH
 from src.quoting import get_api_quote, send_email_quote_request
 from src.email_parser import parse_incoming_quotes
 from src.negotiation import send_negotiation_request
+from src.config import CARRIERS
 from src.ml_model import predict_final_offer
 
 # --- Configuration ---
-# In a real app, this would be in a separate config file
-CARRIERS = {
-    'Carrier API': {'type': 'api', 'contact': 'api_endpoint_url'},
-    'Carrier A Email': {'type': 'email', 'contact': 'carrierA@example'},
-    'Carrier B Email': {'type': 'email', 'contact': 'carrierB@example'},
-    'Carrier Email C': {'type': 'email', 'contact': 'carrierC@example.com'}
-}
 POLLING_INTERVAL_SECONDS = 60 # Check for new emails every 60 seconds
 POLLING_TIMEOUT_MINUTES = 20 # Give up after 20 minutes
 

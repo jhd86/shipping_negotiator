@@ -1,8 +1,8 @@
 # src/quoting.py
 import smtplib
 from email.message import EmailMessage
+from src.config import SENDER_EMAIL, SENDER_PASSWORD
 import requests
-# ... other imports as needed
 
 # --- Placeholder for API Logic ---
 def get_api_quote(carrier_name, shipment_details):
@@ -25,9 +25,6 @@ def get_api_quote(carrier_name, shipment_details):
 def send_email_quote_request(carrier_email, shipment_details):
     """Sends a standardized quote request email."""
     print(f"Sending email quote request to {carrier_email}...")
-    # NOTE: You'll need to set up an app password for Gmail/Outlook
-    SENDER_EMAIL = "your_email@example.com"
-    SENDER_PASSWORD = "your_password"
 
     subject = f"Quote Request - Shipment #{shipment_details['shipment_id']}"
     body = f"""

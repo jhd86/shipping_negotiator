@@ -2,11 +2,10 @@
 from imap_tools import MailBox, A
 import re
 from datetime import datetime
+from src.config import SENDER_EMAIL, SENDER_PASSWORD
 
 def parse_incoming_quotes(conn, carriers_config):
     """Logs into email, finds quote replies, parses them, and updates the DB."""
-    SENDER_EMAIL = "your_email@example.com"
-    SENDER_PASSWORD = "your_password"
     IMAP_SERVER = "imap.gmail.com"
 
     cursor = conn.cursor()
