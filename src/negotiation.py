@@ -1,6 +1,6 @@
 import smtplib
 from email.message import EmailMessage
-from src.config import SENDER_EMAIL, SENDER_PASSWORD
+from src.config import SENDER_EMAIL, SENDER_PASSWORD, COMPANY_NAME, SMTP_SERVER
 
 def send_negotiation_request(carrier_email, shipment_id, lowest_bid):
     """Sends an email asking a carrier to beat a competing price."""
@@ -18,7 +18,7 @@ def send_negotiation_request(carrier_email, shipment_id, lowest_bid):
     Quote: $1234.56
 
     Thank you,
-    Your Company Name
+    {COMPANY_NAME}
     """
 
     msg = EmailMessage()
@@ -28,7 +28,7 @@ def send_negotiation_request(carrier_email, shipment_id, lowest_bid):
     msg['To'] = carrier_email
 
     try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server = smtplib.SMTP_SSL(SMTP_SERVER, 465)
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.send_message(msg)
         server.quit()

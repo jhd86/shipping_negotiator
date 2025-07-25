@@ -1,7 +1,7 @@
 # src/quoting.py
 import smtplib
 from email.message import EmailMessage
-from src.config import SENDER_EMAIL, SENDER_PASSWORD
+from src.config import COMPANY_NAME, SENDER_EMAIL, SENDER_PASSWORD
 import requests
 
 # --- Placeholder for API Logic ---
@@ -39,7 +39,7 @@ def send_email_quote_request(carrier_email, shipment_details):
     Quote: $1234.56
 
     Thank you,
-    Your Company Name
+    {COMPANY_NAME}
     """
 
     msg = EmailMessage()
