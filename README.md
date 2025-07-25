@@ -103,7 +103,7 @@ shipping_negotiator/
 ## Configuration
 
 - **Carriers:** Edit the `CARRIERS` dictionary in `config.py` to add or modify carriers and their contact methods.
-- **Email Credentials:** Update `SENDER_EMAIL`, `SENDER_PASSWORD` in `config.py` with your own (use app passwords for Gmail/Outlook). Update `IMAP_SERVER` and `SMTP_SERVER with server addresses that correspond to your email provider (gmail is imap.gmail.com, smtp.gmail.com).
+- **Email Credentials:** Update `SENDER_EMAIL`, `SENDER_PASSWORD` in `config.py` with your own (use app passwords for Gmail/Outlook). Update `IMAP_SERVER` and `SMTP_SERVER` with server addresses that correspond to your email provider (Gmail is imap.gmail.com, smtp.gmail.com).
 - **Polling Intervals:** Adjust `POLLING_INTERVAL_SECONDS` and `POLLING_TIMEOUT_MINUTES` in `main.py` as needed.
 
 ## How It Works
@@ -117,4 +117,4 @@ shipping_negotiator/
 
 ## Security Note
 
-- **Credentials:** Do not commit real email credentials to version control. Use 'config.py' and '.gitignore' for sensitive information in production.
+- **Credentials:** Do not commit real email credentials to version control. Use `config.py` and `.gitignore` for sensitive information in production.
