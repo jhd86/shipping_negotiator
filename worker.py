@@ -4,7 +4,7 @@ from datetime import datetime
 
 # Import all the necessary functions from your utility files
 from src.database_setup import DB_PATH
-from src.quoting import send_email_quote_request
+from src.quoting import send_email_quote_request, get_api_quote
 from src.email_parser import parse_incoming_quotes
 from src.negotiation import send_negotiation_request
 from src.config import CARRIERS
@@ -38,7 +38,13 @@ def start_new_shipments(conn):
         # Send quote requests to all carriers for this shipment
         for name, info in CARRIERS.items():
             cursor.execute("INSERT INTO quotes (shipment_id, carrier_name, quote_type) VALUES (?, ?, ?)", (shipment_id, name, 'initial'))
-            if info['type'] == 'email':
+            if info['type'] == 'api':
+                price = get_api_quote(name, shipment_details)
+                if price:
+                     cursor.execute("UPDATE quotes SET price = ?, received_at = ? WHERE shipment_id = ? AND carrier_name = ? AND quote_type = 'initial'",
+                                   (price, datetime.now().isoformat(), shipment_id, name))
+                     conn.commit()
+            elif info['type'] == 'email':
                 send_email_quote_request(info['contact'], shipment_details)
 
         # Update the shipment status to show it's being processed
