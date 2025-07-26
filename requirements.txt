@@ -3,4 +3,5 @@ numpy
 scikit-learn
 joblib
 imap-tools
-requests 
+requests
+streamlit
