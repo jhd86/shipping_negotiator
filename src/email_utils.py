@@ -13,8 +13,7 @@ Please provide a quote for the following shipment:
 - Weight (lbs): {shipment_details['weight']}
 - Destination ZIP: {shipment_details['destination_zip']}
 
-To help us process this automatically, please reply with the price on a line by itself formatted like this:
-Quote: $1234.56
+Please reply with your best quote for this shipment.
 
 Thank you,
 {COMPANY_NAME}
@@ -31,8 +30,7 @@ Regarding shipment #{shipment_id}, we have received a competing quote of ${lowes
 
 We value your service and would like to give you the opportunity to provide a final, more competitive offer.
 
-Please reply with your best and final offer in the same format as before:
-Quote: $1234.56
+Please reply with your best and final offer.
 
 Thank you,
 {COMPANY_NAME}
