@@ -98,29 +98,55 @@ def advance_to_negotiation(conn):
 
 
 def complete_shipments(conn):
-    """Finds shipments awaiting final offers and marks them as complete when done."""
+    """
+    Finds shipments awaiting final offers, determines the true winner,
+    and marks them as complete.
+    """
     cursor = conn.cursor()
-    # Find shipments that are waiting for final offers
     cursor.execute("SELECT shipment_id FROM shipments WHERE status = 'awaiting_final_offers'")
     shipments_to_check = cursor.fetchall()
 
     for (shipment_id,) in shipments_to_check:
-        # First, find out who the initial leader was and what their price was.
-        cursor.execute("SELECT price FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' ORDER BY price ASC LIMIT 1", (shipment_id,))
-        initial_leader_price = cursor.fetchone()[0]
-
-        # Count how many carriers we sent negotiation emails to.
-        cursor.execute("SELECT COUNT(*) FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received' AND price > ?", (shipment_id, initial_leader_price))
+        # First, find out how many final offers we were expecting.
+        cursor.execute("""
+            SELECT COUNT(*) FROM quotes
+            WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received' AND
+                  price > (SELECT MIN(price) FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received')
+        """, (shipment_id, shipment_id))
         expected_final_offers = cursor.fetchone()[0]
 
-        # Count how many final offers we have actually received (or failed).
+        # Now, count how many we actually received.
         cursor.execute("SELECT COUNT(*) FROM quotes WHERE shipment_id = ? AND quote_type = 'final' AND status IN ('received', 'failed')", (shipment_id,))
         received_final_offers = cursor.fetchone()[0]
 
-        # If we have received all the replies we were waiting for, the job is done.
+        # Only proceed if all expected offers are in.
         if received_final_offers >= expected_final_offers:
-            print(f"WORKER: ✅ Negotiation complete for shipment #{shipment_id}. Marking as complete.")
-            cursor.execute("UPDATE shipments SET status = 'complete' WHERE shipment_id = ?", (shipment_id,))
+            print(f"WORKER: All final offers received for shipment #{shipment_id}. Determining winner...")
+
+            # Get the initial winner
+            cursor.execute("SELECT carrier_name, price FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received' ORDER BY price ASC LIMIT 1", (shipment_id,))
+            initial_winner, initial_price = cursor.fetchone()
+
+            # Find the best *negotiated* final offer
+            cursor.execute("SELECT carrier_name, price FROM quotes WHERE shipment_id = ? AND quote_type = 'final' AND status = 'received' ORDER BY price ASC LIMIT 1", (shipment_id,))
+            best_final_offer = cursor.fetchone()
+
+            final_winner = initial_winner
+            final_price = initial_price
+
+            # If a better final offer exists, it becomes the new winner.
+            if best_final_offer and best_final_offer[1] < initial_price:
+                final_winner = best_final_offer[0]
+                final_price = best_final_offer[1]
+                print(f"WORKER: ✅ Negotiation successful! New winner is {final_winner} at ${final_price:.2f}.")
+            else:
+                print(f"WORKER: Negotiation did not produce a better offer. Initial winner {initial_winner} stands.")
+
+            # Update the shipments table with the definitive result
+            cursor.execute(
+                "UPDATE shipments SET status = 'complete', final_winner = ?, final_price = ? WHERE shipment_id = ?",
+                (final_winner, final_price, shipment_id)
+            )
             conn.commit()
 
 
