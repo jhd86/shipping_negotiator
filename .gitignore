@@ -13,3 +13,4 @@ data/shipping_quotes.db
 
 # Not used
 main.py
+.DS_Store
