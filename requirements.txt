@@ -5,3 +5,4 @@ joblib
 imap-tools
 requests
 streamlit
+google-genai

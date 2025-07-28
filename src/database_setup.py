@@ -17,8 +17,9 @@ def create_database():
         spots INTEGER NOT NULL,
         weight REAL NOT NULL,
         destination_zip TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending'
-        -- Status: pending, quoted, negotiating, booked, complete
+        status TEXT NOT NULL DEFAULT 'pending',
+        final_winner TEXT,
+        final_price REAL
     );
     """)
 
