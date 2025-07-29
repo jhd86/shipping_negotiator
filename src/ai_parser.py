@@ -11,9 +11,9 @@ def parse_quote_with_ai(email_body: str) -> Union[float, None]:
     Uses the Gemini API via the genai.Client to parse the quote from an email body,
     aligning with the official documentation.
     """
+    response = None
+    clean_text = ""
     try:
-        # Use the client as shown in the documentation.
-        # It automatically finds the API key from environment variables if not passed directly.
         client = genai.Client(api_key=GEMINI_API_KEY)
 
         # A more direct prompt to ensure only JSON is returned.
@@ -31,7 +31,6 @@ def parse_quote_with_ai(email_body: str) -> Union[float, None]:
         ---
         """
 
-        # Use the exact method from the documentation: client.models.generate_content
         response = client.models.generate_content(
             model="models/gemini-2.5-flash",
             contents=prompt,
@@ -39,16 +38,20 @@ def parse_quote_with_ai(email_body: str) -> Union[float, None]:
                     thinking_config=types.ThinkingConfig(thinking_budget=0)
             ),
         )
-        clean_text = re.sub(r'```json\n(.*?)\n```', r'\1', response.text, flags=re.DOTALL)
+        if response and response.text:
+            clean_text = re.sub(r'```json\n(.*?)\n```', r'\1', response.text, flags=re.DOTALL).strip()
+            json_response = json.loads(clean_text)
 
-        # The response.text should now be a clean JSON string
-        json_response = json.loads(clean_text)
+            price = json_response.get("price")
+            return float(price) if price is not None else None
+        else:
+            print("GEMINI PARSER ERROR: Received an empty response from the API.")
+            return None
 
-        price = json_response.get("price")
-        return float(price) if price is not None else None
 
-    except json.JSONDecodeError as e:
-        print(f"GEMINI PARSER ERROR: Failed to decode JSON. Raw response was: {response.text}. Error: {e}")
+    except json.JSONDecodeError:
+        raw_response = response.text if response else "No response object"
+        print(f"GEMINI PARSER ERROR: Failed to decode JSON. Raw response was: '{raw_response}'")
         return None
     except Exception as e:
         print(f"GEMINI PARSER ERROR: An unexpected error occurred: {e}")

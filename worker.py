@@ -8,7 +8,7 @@ from src.quoting import send_email_quote_request, get_api_quote
 from src.email_parser import parse_incoming_quotes
 from src.negotiation import send_negotiation_request
 from src.config import CARRIERS
-from src.ml_model import predict_final_offer
+# from src.ml_model import predict_final_offer
 
 # --- Configuration ---
 POLLING_INTERVAL_SECONDS = 60 # Check for new work every 60 seconds
