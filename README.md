@@ -18,7 +18,6 @@ shipping_negotiator/
 │
 ├── app.py                   # Streamlit front-end dashboard
 ├── worker.py                # Background worker for email processing and negotiation
-├── Procfile                 # Process declarations for honcho
 ├── run_app.sh               # Executable script to start the application
 ├── requirements.txt         # Project dependencies
 ├── reset_database.py        # Utility to wipe the database
