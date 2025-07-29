@@ -1,41 +1,41 @@
 # Shipping Negotiator
 
-A Python system for automating the process of collecting, negotiating, and analyzing shipping quotes from multiple carriers. The project supports both API and email-based carriers, and leverages machine learning to predict and optimize negotiation outcomes.
+A Python system for automating the process of collecting, negotiating, and analyzing shipping quotes from multiple carriers. The project uses the Gemini API for intelligent, format-free email parsing and leverages machine learning to predict and optimize negotiation outcomes.
 
 ## Features
 
 - **Automated Quote Requests:** Sends quote requests to carriers via email or API.
-- **Email Parsing:** Automatically checks and parses carrier email replies for quotes.
+- **AI-Powered Email Parsing:** Uses Google's Gemini API to intelligently parse prices from carrier emails, removing the need for a fixed format.
 - **Negotiation Automation:** Initiates negotiation rounds with non-leading carriers to encourage better offers.
-- **Machine Learning:** Trains models to predict final offers from carriers based on historical data.
+- **[IN PROGRESS] Machine Learning:** Trains models to predict final offers from carriers based on historical data.
+- **Interactive Dashboard:** A Streamlit-based web interface to log new shipments, monitor progress, and preview emails.
 - **Database-Backed:** Uses SQLite to store shipments, quotes, and negotiation history.
-- **Sample Data Generation:** Includes tools to generate realistic sample shipment and quote data for testing and model training.
 
 ## Project Structure
 
 ```
 shipping_negotiator/
 │
-├── worker.py                # Orchestrates the end-to-end quoting and negotiation process
-├── app.py                   # Dashboard for tracking shipments and negotiations
-├── generate_sample_data.py  # Script to generate synthetic shipment and quote data
-├── reset_database.py        # Utility to reset the database
-├── sample_shipment_data.csv # Example generated data
+├── app.py                   # Streamlit front-end dashboard
+├── worker.py                # Background worker for email processing and negotiation
+├── Procfile                 # Process declarations for honcho
+├── run_app.sh               # Executable script to start the application
+├── requirements.txt         # Project dependencies
+├── reset_database.py        # Utility to wipe the database
 │
 ├── data/
 │   └── shipping_quotes.db   # SQLite database file
 │
 ├── src/
 │   ├── database_setup.py    # Database schema and setup logic
-│   ├── quoting.py           # Functions for sending quote requests (API/email)
-│   ├── email_parser.py      # Functions for parsing incoming quote emails
+│   ├── quoting.py           # Functions for sending quote requests
+│   ├── email_parser.py      # Main email fetching and processing logic
+│   ├── ai_parser.py         # AI logic for parsing email content with Gemini
 │   ├── negotiation.py       # Functions for sending negotiation requests
 │   ├── ml_model.py          # Machine learning model training and prediction
-│   └── config.py            # Template for configuration settings - FILL THIS OUT
+│   └── config.py            # Configuration for secrets and settings
 │
-├── models/                  # Trained ML models (created at runtime)
-├── emails/                  # (Optional) For storing email templates or logs
-└── venv/                    # Python virtual environment
+└── models/                  # Directory for saved ML models
 ```
 
 ## Setup
@@ -52,47 +52,21 @@ shipping_negotiator/
    ```bash
    pip install -r requirements.txt
    ```
+3. **Configure your secrets:**
+- Rename `src/config.py.template` to `src/config.py`.
+- Carriers: Edit the `CARRIERS` dictionary in `config.py` to add or modify carriers and their contact methods.
+- Email Credentials: Update `SENDER_EMAIL`, `SENDER_PASSWORD` in `config.py` with your own (use app passwords for Gmail/Outlook). Update `IMAP_SERVER` and `SMTP_SERVER` with server addresses that correspond to your email provider (Gmail is imap.gmail.com, smtp.gmail.com).
+- API Keys: Obtain and update `GEMINI_API_KEY` in `config.py` with your API keys for each carrier.
+- Polling Intervals: Adjust `POLLING_INTERVAL_SECONDS` and `POLLING_TIMEOUT_MINUTES` in `main.py` as needed.
 
-3. **Set up the database:**
+4. **Set up the database:**
    ```bash
    python src/database_setup.py
    ```
 
-4. **(Optional) Generate sample data:**
-   ```bash
-   python generate_sample_data.py
-   ```
+## Utilities
 
-## Usage
-
-- **Running the program:**
-  Set up the front end:
-  ```bash
-  # Navigate to your project directory
-  cd /path/to/shipping_negotiator
-
-  # Activate your virtual environment
-  source venv/bin/activate
-
-  # Run the Streamlit app
-  python -m streamlit run app.py
-  ```
-
-  In a seperate terminal window, run the backend:
-  ```bash
-  # Navigate to your project directory
-  cd /path/to/shipping_negotiator
-
-  # Activate your virtual environment
-  source venv/bin/activate
-
-  # Run the worker script
-  python worker.py
-  ```
-
-
-
-- **Reset the database (Utility):**
+- **Reset the database:**
   ```bash
   python reset_database.py
   ```
@@ -100,21 +74,6 @@ shipping_negotiator/
 - **(IN PROGRESS) Train machine learning models:**
   Edit and run the relevant functions in `src/ml_model.py` to train models for each carrier using your data.
 
-## Configuration
-
-- **Carriers:** Edit the `CARRIERS` dictionary in `config.py` to add or modify carriers and their contact methods.
-- **Email Credentials:** Update `SENDER_EMAIL`, `SENDER_PASSWORD` in `config.py` with your own (use app passwords for Gmail/Outlook). Update `IMAP_SERVER` and `SMTP_SERVER` with server addresses that correspond to your email provider (Gmail is imap.gmail.com, smtp.gmail.com).
-- **Polling Intervals:** Adjust `POLLING_INTERVAL_SECONDS` and `POLLING_TIMEOUT_MINUTES` in `main.py` as needed.
-
-## How It Works
-
-1. **Shipment Entry:** User provides shipment details via web application.
-2. **Quote Requests:** System logs the shipment and requests quotes from all configured carriers.
-3. **Email/API Handling:** Waits for and parses incoming quotes (via email or API).
-4. **Negotiation:** Identifies the lowest bid and asks other carriers to beat it.
-5. **Machine Learning (WORK IN PROGRESS):** Predicts which carriers are likely to negotiate and by how much, using historical data.
-6. **Database Logging:** All actions and quotes are logged for analysis and model training.
-
 ## Security Note
 
-- **Credentials:** Do not commit real email credentials to version control. Use `config.py` and `.gitignore` for sensitive information in production.
+- **Credentials:** Your secret keys and passwords in `src/config.py` are ignored by Git via the `.gitignore` file to prevent them from being committed to your repository.
