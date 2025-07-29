@@ -64,6 +64,17 @@ shipping_negotiator/
    python src/database_setup.py
    ```
 
+## Usage
+You can run the entire application (web dashboard and background worker) with a single command using the provided executable script.
+
+```bash
+# Make the script executable (only need to do this once)
+chmod +x run_app.sh
+
+# Run the application
+./run_app.sh
+```
+
 ## Utilities
 
 - **Reset the database:**
