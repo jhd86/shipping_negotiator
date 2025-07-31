@@ -47,5 +47,45 @@ def get_quotes(shipment_id):
     conn.close()
     return jsonify([dict(row) for row in quotes])
 
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    """API endpoint to get dashboard summary statistics."""
+    conn = get_db_connection()
+    total_shipments = conn.execute('SELECT COUNT(*) FROM shipments').fetchone()[0]
+    in_progress = conn.execute("SELECT COUNT(*) FROM shipments WHERE status NOT IN ('complete', 'failed')").fetchone()[0]
+
+    # Calculate savings from completed shipments
+    completed = conn.execute("SELECT final_price FROM shipments WHERE status = 'complete' AND final_price IS NOT NULL").fetchall()
+
+    total_savings = 0
+    # Find all completed shipments that have a final price
+    completed_shipments = conn.execute(
+        "SELECT shipment_id, final_price FROM shipments WHERE status = 'complete' AND final_price IS NOT NULL"
+    ).fetchall()
+
+    for shipment in completed_shipments:
+        shipment_id = shipment['shipment_id']
+        final_price = shipment['final_price']
+
+        # Find the lowest initial bid for that shipment
+        lowest_initial_bid_row = conn.execute(
+            "SELECT MIN(price) FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received'",
+            (shipment_id,)
+        ).fetchone()
+
+        if lowest_initial_bid_row and lowest_initial_bid_row[0] is not None:
+            lowest_initial_bid = lowest_initial_bid_row[0]
+            # Add the difference to total savings if we saved money
+            if lowest_initial_bid > final_price:
+                total_savings += (lowest_initial_bid - final_price)
+
+    conn.close()
+
+    return jsonify({
+        "total_shipments": total_shipments,
+        "in_progress": in_progress,
+        "total_savings": total_savings # Placeholder
+    })
+
 if __name__ == '__main__':
     app.run(debug=True)

@@ -7,7 +7,7 @@ from src.database_setup import DB_PATH
 from src.quoting import send_email_quote_request, get_api_quote
 from src.email_parser import parse_incoming_quotes
 from src.negotiation import send_negotiation_request
-from src.config import CARRIERS
+from src.config import CARRIERS, TIMEOUT_HOURS
 # from src.ml_model import predict_final_offer
 
 # --- Configuration ---
@@ -53,7 +53,7 @@ def start_new_shipments(conn):
         print(f"WORKER: Initial quote requests sent for shipment #{shipment_id}.")
 
 
-def advance_to_negotiation(conn):
+'''def advance_to_negotiation(conn):
     """
     Finds shipments ready for negotiation, uses the ML model to predict outcomes,
     and sends counter-offer emails to promising candidates.
@@ -108,6 +108,48 @@ def advance_to_negotiation(conn):
                 send_negotiation_request(contact_email, shipment_id, lowest_bid)
             else:
                 print(f"   - Model predicts {carrier_name} will not beat the price. Skipping.")
+
+        # Update status to show we're waiting for final offers
+        cursor.execute("UPDATE shipments SET status = 'awaiting_final_offers' WHERE shipment_id = ?", (shipment_id,))
+        conn.commit()'''
+
+def advance_to_negotiation(conn):
+    """Finds shipments ready for negotiation and sends the counter-offer emails."""
+    cursor = conn.cursor()
+    # Find shipments where all initial quotes have been received
+    cursor.execute("""
+        SELECT s.shipment_id, s.spots, s.weight, s.destination_zip
+        FROM shipments s
+        WHERE s.status = 'awaiting_initial_quotes' AND
+              (SELECT COUNT(*) FROM quotes q WHERE q.shipment_id = s.shipment_id AND q.quote_type = 'initial' AND q.status IN ('received', 'failed')) = ?
+    """, (len(CARRIERS),))
+
+    ready_shipments = cursor.fetchall()
+
+    for shipment in ready_shipments:
+        shipment_id, spots, weight, destination_zip = shipment
+        print(f"WORKER: Shipment #{shipment_id} is ready for negotiation.")
+
+        # Find the initial leader
+        cursor.execute("SELECT carrier_name, price FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received' ORDER BY price ASC LIMIT 1", (shipment_id,))
+        result = cursor.fetchone()
+        if not result:
+            print(f"WORKER: No successful initial bids for #{shipment_id}. Marking as complete.")
+            cursor.execute("UPDATE shipments SET status = 'complete' WHERE shipment_id = ?", (shipment_id,))
+            conn.commit()
+            continue
+
+        leader_carrier, lowest_bid = result
+
+        # In a real app, you would add your ML logic here to decide who to negotiate with
+        print(f"WORKER: Initial leader for #{shipment_id} is {leader_carrier} at ${lowest_bid:.2f}. Starting negotiation round.")
+
+        cursor.execute("SELECT carrier_name FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received' AND carrier_name != ?", (shipment_id, leader_carrier))
+        carriers_to_negotiate_with = cursor.fetchall()
+
+        for (carrier_name,) in carriers_to_negotiate_with:
+            contact_email = CARRIERS[carrier_name]['contact']
+            send_negotiation_request(contact_email, shipment_id, lowest_bid)
 
         # Update status to show we're waiting for final offers
         cursor.execute("UPDATE shipments SET status = 'awaiting_final_offers' WHERE shipment_id = ?", (shipment_id,))
@@ -168,6 +210,27 @@ def complete_shipments(conn):
             conn.commit()
 
 
+def timeout_stale_shipments(conn):
+    """Finds shipments that are stuck and marks them as complete."""
+    cursor = conn.cursor()
+    # Find shipments older than the timeout period that are still awaiting responses
+    cursor.execute("""
+        SELECT shipment_id FROM shipments
+        WHERE status LIKE 'awaiting%' AND
+              request_date < datetime('now', '-' || ? || ' hours')
+    """, (TIMEOUT_HOURS,))
+
+    stale_shipments = cursor.fetchall()
+
+    for (shipment_id,) in stale_shipments:
+        print(f"WORKER: ⚠️ Shipment #{shipment_id} has timed out. Marking as complete.")
+        # Mark as complete with no winner
+        cursor.execute(
+            "UPDATE shipments SET status = 'complete', final_winner = 'Timed Out' WHERE shipment_id = ?",
+            (shipment_id,)
+        )
+        conn.commit()
+
 def worker_loop():
     """The main infinite loop for the background worker."""
     print("🚀 Worker started. Looking for jobs...")
@@ -175,17 +238,20 @@ def worker_loop():
         try:
             conn = get_db_connection()
 
-            # Task 1: Always parse incoming emails first to update state
+            # Task 1: Always parse incoming emails first
             parse_incoming_quotes(conn, CARRIERS)
 
             # Task 2: Find and start any brand new shipments
             start_new_shipments(conn)
 
-            # Task 3: Find shipments ready to be advanced to the negotiation stage
+            # Task 3: Find shipments ready for negotiation
             advance_to_negotiation(conn)
 
             # Task 4: Find and complete finished negotiations
             complete_shipments(conn)
+
+            # NEW Task 5: Find and time out stale shipments
+            timeout_stale_shipments(conn)
 
             conn.close()
         except Exception as e:
