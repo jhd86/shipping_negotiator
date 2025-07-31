@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Shipping Negotiator</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                margin: 2em;
+                background-color: #f4f4f9;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 1em;
+            }
+            th,
+            td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            th {
+                background-color: #e4e4f0;
+            }
+            form {
+                margin-bottom: 2em;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>🚚 Shipping Negotiator Dashboard</h1>
+
+        <h2>Log a New Shipment</h2>
+        <form id="new-shipment-form">
+            <input type="number" id="spots" placeholder="Spots" required />
+            <input
+                type="number"
+                id="weight"
+                placeholder="Weight (lbs)"
+                required
+            />
+            <input type="text" id="zip" placeholder="ZIP Code" required />
+            <button type="submit">Log Shipment</button>
+        </form>
+
+        <h2>All Shipments</h2>
+        <table id="shipments-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Final Winner</th>
+                    <th>Final Price</th>
+                    <th>Spots</th>
+                    <th>Weight</th>
+                    <th>ZIP</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <h2>Quote Details for Shipment #<span id="details-id"></span></h2>
+        <table id="quotes-table">
+            <thead>
+                <tr>
+                    <th>Carrier</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Price</th>
+                    <th>Received At</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <script src="/static/app.js"></script>
+    </body>
+</html>
