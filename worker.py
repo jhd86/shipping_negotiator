@@ -54,9 +54,11 @@ def start_new_shipments(conn):
 
 
 def advance_to_negotiation(conn):
-    """Finds shipments ready for negotiation and sends the counter-offer emails."""
+    """
+    Finds shipments ready for negotiation, uses the ML model to predict outcomes,
+    and sends counter-offer emails to promising candidates.
+    """
     cursor = conn.cursor()
-    # Find shipments where all initial quotes have been received
     cursor.execute("""
         SELECT s.shipment_id, s.spots, s.weight, s.destination_zip
         FROM shipments s
@@ -68,6 +70,15 @@ def advance_to_negotiation(conn):
 
     for shipment in ready_shipments:
         shipment_id, spots, weight, destination_zip = shipment
+        shipment_details = {
+            'shipment_id': shipment_id,
+            'spots': spots,
+            'weight': weight,
+            'destination_zip': destination_zip,
+            # This is the feature for the ML model
+            'dest_zip_encoded': int(str(destination_zip)[0])
+        }
+
         print(f"WORKER: Shipment #{shipment_id} is ready for negotiation.")
 
         # Find the initial leader
@@ -80,16 +91,23 @@ def advance_to_negotiation(conn):
             continue
 
         leader_carrier, lowest_bid = result
+        print(f"WORKER: Initial leader for #{shipment_id} is {leader_carrier} at ${lowest_bid:.2f}. Using ML to check for negotiation candidates.")
 
-        # In a real app, you would add your ML logic here to decide who to negotiate with
-        print(f"WORKER: Initial leader for #{shipment_id} is {leader_carrier} at ${lowest_bid:.2f}. Starting negotiation round.")
-
+        # Get all carriers that were not the leader
         cursor.execute("SELECT carrier_name FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received' AND carrier_name != ?", (shipment_id, leader_carrier))
-        carriers_to_negotiate_with = cursor.fetchall()
+        carriers_to_check = cursor.fetchall()
 
-        for (carrier_name,) in carriers_to_negotiate_with:
-            contact_email = CARRIERS[carrier_name]['contact']
-            send_negotiation_request(contact_email, shipment_id, lowest_bid)
+        # Use the ML model to decide who to negotiate with
+        for (carrier_name,) in carriers_to_check:
+            predicted_price = predict_final_offer(carrier_name, shipment_details, lowest_bid)
+
+            # Only negotiate if the model predicts a better price
+            if predicted_price and predicted_price < lowest_bid:
+                print(f"   - Model predicts {carrier_name} may beat the price (Predicted: ${predicted_price:.2f}). Sending negotiation request.")
+                contact_email = CARRIERS[carrier_name]['contact']
+                send_negotiation_request(contact_email, shipment_id, lowest_bid)
+            else:
+                print(f"   - Model predicts {carrier_name} will not beat the price. Skipping.")
 
         # Update status to show we're waiting for final offers
         cursor.execute("UPDATE shipments SET status = 'awaiting_final_offers' WHERE shipment_id = ?", (shipment_id,))
