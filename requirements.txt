@@ -6,3 +6,5 @@ imap-tools
 requests
 streamlit
 google-genai
+honcho
+flask
