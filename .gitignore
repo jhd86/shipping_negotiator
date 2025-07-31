@@ -22,5 +22,8 @@ build/
 .vscode/
 .idea/
 
+# Electron files
+node_modules/
+
 # macOS files
 .DS_Store
