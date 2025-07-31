@@ -51,40 +51,41 @@ shipping_negotiator/
 
 ## Setup
 
-1. **Clone the repository** and create a virtual environment:
-   ```bash
-   git clone https://github.com/jhd86/shipping_negotiator
-   cd shipping_negotiator
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+1.  **Clone the repository** and create a Python virtual environment:
+    ```bash
+    git clone <your-repo-url>
+    cd shipping_negotiator
+    python -m venv venv
+    source venv/bin/activate
+    ```
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Configure your secrets:**
-- Rename `src/config.py.template` to `src/config.py`.
-- Carriers: Edit the `CARRIERS` dictionary in `config.py` to add or modify carriers and their contact methods.
-- Email Credentials: Update `SENDER_EMAIL`, `SENDER_PASSWORD` in `config.py` with your own (use app passwords for Gmail/Outlook). Update `IMAP_SERVER` and `SMTP_SERVER` with server addresses that correspond to your email provider (Gmail is imap.gmail.com, smtp.gmail.com).
-- API Keys: Obtain and update `GEMINI_API_KEY` in `config.py` with your API keys for each carrier.
-- Polling Intervals: Adjust `POLLING_INTERVAL_SECONDS` and `POLLING_TIMEOUT_MINUTES` in `main.py` as needed.
+2.  **Install Python dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-4. **Set up the database:**
-   ```bash
-   python src/database_setup.py
-   ```
+3.  **Install Node.js dependencies:**
+    ```bash
+    npm install
+    ```
+
+4.  **Configure your secrets:**
+    -   Create a file `src/config.py` (you can copy `src/config.py.template` if you have one).
+    -   Add your `GEMINI_API_KEY`, email credentials, carrier details, etc.
+
+5.  **Set up the database:**
+    ```bash
+    python src/database_setup.py
+    ```
 
 ## Usage
-You can run the entire application (web dashboard and background worker) with a single command using the provided executable script.
+
+You can run the entire desktop application with a single command:
 
 ```bash
-# Make the script executable (only need to do this once)
-chmod +x run_app.sh
-
-# Run the application
-./run_app.sh
+npm start
 ```
+This will launch the Electron window and automatically start the Python Flask server and background worker.
 
 ## Utilities
 
