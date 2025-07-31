@@ -1,24 +1,28 @@
 # Shipping Negotiator
 
-A Python system for automating the process of collecting, negotiating, and analyzing shipping quotes from multiple carriers. The project uses the Gemini API for intelligent, format-free email parsing and leverages machine learning to predict and optimize negotiation outcomes.
+A Python and Electron-based desktop application for automating the process of collecting, negotiating, and analyzing shipping quotes from multiple carriers. The project uses the Gemini API for intelligent, format-free email parsing and leverages machine learning to predict and optimize negotiation outcomes.
 
 ## Features
 
-- **Automated Quote Requests:** Sends quote requests to carriers via email or API.
-- **AI-Powered Email Parsing:** Uses Google's Gemini API to intelligently parse prices from carrier emails, removing the need for a fixed format.
-- **Negotiation Automation:** Initiates negotiation rounds with non-leading carriers to encourage better offers.
-- **[IN PROGRESS] Machine Learning:** Trains models to predict final offers from carriers based on historical data.
-- **Interactive Dashboard:** A Streamlit-based web interface to log new shipments, monitor progress, and preview emails.
-- **Database-Backed:** Uses SQLite to store shipments, quotes, and negotiation history.
+-   **Automated Quote Requests:** Sends quote requests to carriers via email or API.
+-   **AI-Powered Email Parsing:** Uses Google's Gemini API to intelligently parse prices from carrier emails, removing the need for a fixed format.
+-   **Negotiation Automation:** Initiates negotiation rounds with non-leading carriers to encourage better offers.
+-   **Machine Learning:** Trains models to predict final offers from carriers based on historical data.
+-   **Interactive Dashboard:** A custom web-based front end to log new shipments and monitor progress.
+-   **Database-Backed:** Uses SQLite to store all shipment and quote history.
 
 ## Project Structure
 
 ```
 shipping_negotiator/
 │
-├── app.py                   # Streamlit front-end dashboard
+├── app.py                   # Flask backend server
 ├── worker.py                # Background worker for email processing and negotiation
-├── run_app.sh               # Executable script to start the application
+├── main.js                  # Main Electron script
+├── preload.js               # Electron preload script
+├── package.json             # Node.js dependencies and scripts
+├── Procfile                 # Process declarations for honcho
+├── run_app.sh               # Helper script for starting Python backend
 ├── requirements.txt         # Project dependencies
 ├── reset_database.py        # Utility to wipe the database
 │
@@ -34,7 +38,15 @@ shipping_negotiator/
 │   ├── ml_model.py          # Machine learning model training and prediction
 │   └── config.py            # Configuration for secrets and settings
 │
-└── models/                  # Directory for saved ML models
+├── models/                  # Directory for saved ML models
+│   └── (Trained .joblib models)
+│
+├── static/
+│   ├── app.js
+│   └── style.css
+│
+└── templates/
+    └── index.html
 ```
 
 ## Setup
