@@ -21,7 +21,12 @@ def start_new_shipments(conn):
 
     for shipment in new_shipments:
         shipment_id, spots, weight, destination_zip = shipment
-        print(f"WORKER: Found new shipment #{shipment_id}. Starting quote process...")
+        print(f"WORKER: Found new shipment #{shipment_id}. Locking and starting quote process...")
+
+        # --- BUG FIX: Immediately lock the shipment to prevent reprocessing ---
+        cursor.execute("UPDATE shipments SET status = 'processing_initial' WHERE shipment_id = ?", (shipment_id,))
+        conn.commit()
+
         shipment_details = {'shipment_id': shipment_id, 'spots': spots, 'weight': weight, 'destination_zip': destination_zip}
 
         for name, info in CARRIERS.items():
