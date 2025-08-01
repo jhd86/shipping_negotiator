@@ -1,17 +1,32 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
-/pycache/*
 *.pyc
+*.pyo
+*.pyd
 
-# Environment
+# Virtual environment
 venv/
 
 # Secrets - DO NOT COMMIT
 src/config.py
 
-# Data
+# Database file
 data/shipping_quotes.db
 
-# Not used
-main.py
+# Utility
+import_data.py
+
+# Distribution / packaging
+dist/
+build/
+*.spec
+
+# IDE / Editor folders
+.vscode/
+.idea/
+
+# Electron files
+node_modules/
+
+# macOS files
 .DS_Store

@@ -13,46 +13,48 @@ def parse_incoming_quotes(conn, carriers_config):
     try:
         with MailBox(IMAP_SERVER).login(SENDER_EMAIL, SENDER_PASSWORD, 'INBOX') as mailbox:
             for msg in mailbox.fetch(A(seen=False)):
-                print(f"Found potential quote email from {msg.from_}")
+                print(f"Found potential quote email from {msg.from_} with subject '{msg.subject}'")
 
                 sender_email = msg.from_
                 carrier_name = next((name for name, info in carriers_config.items() if info.get('contact') == sender_email), None)
 
                 if not carrier_name:
                     print(f"   - Could not find a matching carrier for email: {sender_email}. Skipping.")
+                    mailbox.flag(msg.uid, '\\Seen', True) # Mark non-carrier emails as read
                     continue
+
+                shipment_id_match = re.search(r'#(\d+)', msg.subject)
+                if not shipment_id_match:
+                    print(f"   - Could not find shipment ID in subject. Skipping.")
+                    mailbox.flag(msg.uid, '\\Seen', True) # Mark malformed subjects as read
+                    continue
+
+                shipment_id = int(shipment_id_match.group(1))
+                print(f"   - Matched to Shipment ID: {shipment_id}, Carrier: {carrier_name}")
 
                 # Use AI to parse the price from the full email text
                 price = parse_quote_with_ai(msg.text)
 
-                # Extract shipment ID from the subject
-                shipment_id_match = re.search(r'#(\d+)', msg.subject)
-                if not shipment_id_match:
-                    print(f"   - Could not find shipment ID in subject: '{msg.subject}'. Skipping.")
-                    continue
-                shipment_id = int(shipment_id_match.group(1))
+                quote_type = 'final' if 'Final Offer Request' in msg.subject else 'initial'
 
-                # Logic to handle initial vs. final quotes
-                if 'Quote Request' in msg.subject:
-                    quote_type = 'initial'
-                    if price is None:
-                        print(f"   - ❌ AI could not find a quote in INITIAL reply from {carrier_name}. Marking as failed.")
-                        cursor.execute("UPDATE quotes SET status = 'failed' WHERE shipment_id = ? AND carrier_name = ? AND quote_type = ?", (shipment_id, carrier_name, quote_type))
-                    else:
-                        print(f"   - ✅ AI found INITIAL quote of ${price:.2f} from {carrier_name}")
+                if price is None:
+                    print(f"   - ❌ AI could not find a quote in {quote_type.upper()} reply. Marking as failed.")
+                    status_update_sql = "UPDATE quotes SET status = 'failed' WHERE shipment_id = ? AND carrier_name = ? AND quote_type = ?"
+                    if quote_type == 'final':
+                        status_update_sql = "INSERT INTO quotes (shipment_id, carrier_name, quote_type, status) VALUES (?, ?, ?, ?)"
+                    cursor.execute(status_update_sql, (shipment_id, carrier_name, quote_type, 'failed'))
+                else:
+                    print(f"   - ✅ AI found {quote_type.upper()} quote of ${price:.2f}. Updating database...")
+                    if quote_type == 'initial':
                         cursor.execute("UPDATE quotes SET price = ?, received_at = ?, status = 'received' WHERE shipment_id = ? AND carrier_name = ? AND quote_type = ?", (price, datetime.now().isoformat(), shipment_id, carrier_name, quote_type))
-
-                elif 'Final Offer Request' in msg.subject:
-                    quote_type = 'final'
-                    if price is None:
-                        print(f"   - ❌ AI could not find a quote in FINAL reply from {carrier_name}. Marking as failed.")
-                        cursor.execute("INSERT INTO quotes (shipment_id, carrier_name, quote_type, status) VALUES (?, ?, ?, ?)", (shipment_id, carrier_name, quote_type, 'failed'))
-                    else:
-                        print(f"   - ✅ AI found FINAL quote of ${price:.2f} from {carrier_name}")
+                    else: # Final
                         cursor.execute("INSERT INTO quotes (shipment_id, carrier_name, quote_type, price, received_at, status) VALUES (?, ?, ?, ?, ?, ?)", (shipment_id, carrier_name, quote_type, price, datetime.now().isoformat(), 'received'))
 
+                # --- BUG FIX: Only commit and mark as read if the DB operation was successful ---
                 conn.commit()
+                print(f"   - Database updated for Shipment ID: {shipment_id}.")
                 mailbox.flag(msg.uid, '\\Seen', True)
+                print(f"   - Marked email as read.")
 
     except Exception as e:
         print(f"EMAIL PARSER ERROR: Could not connect or process emails. Error: {e}")
