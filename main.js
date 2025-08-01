@@ -1,12 +1,14 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
+const fetch = require("electron-fetch").default; // Use electron-fetch for making network requests
+const FLASK_SERVER_URL = "http://127.0.0.1:5001";
 
 let pythonProcess = null;
+let mainWindow;
 
 function createWindow() {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
@@ -14,42 +16,61 @@ function createWindow() {
     },
   });
 
-  // Start the Python backend
   startPythonBackend();
 
-  // Load the index.html from your Flask server.
-  // We add a small delay to give the Flask server time to start up.
-  setTimeout(() => {
-    mainWindow.loadURL("http://127.0.0.1:5001");
-  }, 5000); // 5-second delay
+  // Start checking for the server to be ready
+  checkServerReady();
 }
 
 function startPythonBackend() {
-  // Use 'spawn' to run your Python script.
-  // This is the equivalent of running 'python worker.py' and 'flask run...'
-  // We use honcho via the shell script for simplicity.
   const scriptPath = path.join(__dirname, "run_app.sh"); // Or 'run_app.bat' on Windows
   pythonProcess = spawn("sh", [scriptPath]);
 
-  pythonProcess.stdout.on("data", (data) => {
-    console.log(`Python stdout: ${data}`);
-  });
+  pythonProcess.stdout.on("data", (data) =>
+    console.log(`Python stdout: ${data}`),
+  );
+  pythonProcess.stderr.on("data", (data) =>
+    console.error(`Python stderr: ${data}`),
+  );
+}
 
-  pythonProcess.stderr.on("data", (data) => {
-    console.error(`Python stderr: ${data}`);
-  });
+function checkServerReady() {
+  const url = "http://127.0.0.1:5001/health";
+  let attempt = 0;
+  const maxAttempts = 10;
+
+  const interval = setInterval(() => {
+    attempt++;
+    console.log(`Pinging Flask server, attempt ${attempt}...`);
+
+    fetch(url)
+      .then((res) => {
+        if (res.ok) {
+          console.log("✅ Flask server is ready.");
+          clearInterval(interval);
+          // Once the server is ready, load the main URL
+          mainWindow.loadURL(FLASK_SERVER_URL);
+        }
+      })
+      .catch(() => {
+        // This catch block will be hit if the connection is refused
+        if (attempt >= maxAttempts) {
+          clearInterval(interval);
+          console.error("❌ Flask server failed to start in time.");
+          // You could show an error message to the user here
+        }
+      });
+  }, 1000); // Check every 1 second
 }
 
 app.whenReady().then(createWindow);
 
-// Quit when all windows are closed, except on macOS.
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-// On quit, kill the python process
 app.on("will-quit", () => {
   if (pythonProcess) {
     pythonProcess.kill();
