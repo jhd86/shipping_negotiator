@@ -87,5 +87,10 @@ def get_stats():
         "total_savings": total_savings # Placeholder
     })
 
+@app.route('/health')
+def health_check():
+    """A simple endpoint to check if the server is running."""
+    return jsonify({"status": "ok"})
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
