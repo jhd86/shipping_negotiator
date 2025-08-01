@@ -41,8 +41,8 @@ def parse_incoming_quotes(conn, carriers_config):
                     print(f"   - ❌ AI could not find a quote in {quote_type.upper()} reply. Marking as failed.")
                     status_update_sql = "UPDATE quotes SET status = 'failed' WHERE shipment_id = ? AND carrier_name = ? AND quote_type = ?"
                     if quote_type == 'final':
-                        status_update_sql = "INSERT INTO quotes (shipment_id, carrier_name, quote_type, status) VALUES (?, ?, ?, 'failed')"
-                    cursor.execute(status_update_sql, (shipment_id, carrier_name, quote_type))
+                        status_update_sql = "INSERT INTO quotes (shipment_id, carrier_name, quote_type, status) VALUES (?, ?, ?, ?)"
+                    cursor.execute(status_update_sql, (shipment_id, carrier_name, quote_type, 'failed'))
                 else:
                     print(f"   - ✅ AI found {quote_type.upper()} quote of ${price:.2f}. Updating database...")
                     if quote_type == 'initial':
