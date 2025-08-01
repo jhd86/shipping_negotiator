@@ -19,23 +19,34 @@ document.addEventListener("DOMContentLoaded", () => {
   let allShipments = [];
   let currentPage = 1;
   let selectedShipmentId = null;
-  const rowsPerPage = 5; // Updated to show 5 rows per page
+  const DEFAULT_ROWS_PER_PAGE = 5;
+  let rowsPerPage = DEFAULT_ROWS_PER_PAGE;
 
-  async function fetchAndRenderAll() {
-    await Promise.all([fetchShipments(), fetchStats()]);
-    // Re-fetch quotes for the selected shipment to keep details updated
+  // --- Main Data Fetching and Rendering ---
+
+  async function refreshDashboard() {
+    console.log("Refreshing dashboard data...");
+    // Fetch stats and shipments in parallel
+    await Promise.all([fetchStats(), fetchShipments()]);
+    // Re-render the table and quotes for the selected shipment
+    renderShipmentsPage();
     if (selectedShipmentId) {
       fetchAndRenderQuotes(selectedShipmentId);
     }
+    console.log("Dashboard refresh complete.");
   }
 
   async function fetchStats() {
     try {
       const response = await fetch("/api/stats");
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
       const stats = await response.json();
+
       totalShipmentsStat.textContent = stats.total_shipments;
       inProgressStat.textContent = stats.in_progress;
       totalSavingsStat.textContent = `$${stats.total_savings.toFixed(2)}`;
+      console.log("Stats loaded:", stats);
     } catch (error) {
       console.error("Failed to fetch stats:", error);
     }
@@ -44,14 +55,12 @@ document.addEventListener("DOMContentLoaded", () => {
   async function fetchShipments() {
     try {
       const response = await fetch("/api/shipments");
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
       allShipments = await response.json();
+      console.log(`Loaded ${allShipments.length} total shipments.`);
 
-      if (allShipments.length === 0) {
-        shipmentsEmptyState.classList.add("visible");
-      } else {
-        shipmentsEmptyState.classList.remove("visible");
-      }
-
+      // Crucially, always render the page after fetching.
       renderShipmentsPage();
     } catch (error) {
       console.error("Failed to fetch shipments:", error);
@@ -88,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
       row.addEventListener("click", () => {
         selectedShipmentId = s.shipment_id;
         fetchAndRenderQuotes(s.shipment_id);
-        renderShipmentsPage(); // Re-render to apply highlighting immediately
+        renderShipmentsPage();
       });
       shipmentsTableBody.appendChild(row);
     });
@@ -133,28 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function handleSearch(event) {
-    event.preventDefault();
-    const searchId = parseInt(searchInput.value, 10);
-    if (isNaN(searchId)) return;
-
-    const shipmentIndex = allShipments.findIndex(
-      (s) => s.shipment_id === searchId,
-    );
-
-    if (shipmentIndex === -1) {
-      alert(`Shipment ID #${searchId} not found.`);
-      return;
-    }
-
-    const targetPage = Math.floor(shipmentIndex / rowsPerPage) + 1;
-    currentPage = targetPage;
-
-    renderShipmentsPage();
-    await fetchAndRenderQuotes(searchId);
-    searchInput.value = "";
-  }
-
+  // --- (Event listeners for forms and buttons are unchanged) ---
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const shipmentData = {
@@ -168,12 +156,28 @@ document.addEventListener("DOMContentLoaded", () => {
       body: JSON.stringify(shipmentData),
     });
     form.reset();
-    await fetchShipments();
+    await refreshDashboard();
     currentPage = 1;
     renderShipmentsPage();
   });
 
-  searchForm.addEventListener("submit", handleSearch);
+  searchForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const searchId = parseInt(searchInput.value, 10);
+    if (isNaN(searchId)) return;
+    const shipmentIndex = allShipments.findIndex(
+      (s) => s.shipment_id === searchId,
+    );
+    if (shipmentIndex === -1) {
+      alert(`Shipment ID #${searchId} not found.`);
+      return;
+    }
+    const targetPage = Math.floor(shipmentIndex / rowsPerPage) + 1;
+    currentPage = targetPage;
+    renderShipmentsPage();
+    await fetchAndRenderQuotes(searchId);
+    searchInput.value = "";
+  });
 
   prevButton.addEventListener("click", () => {
     if (currentPage > 1) {
@@ -190,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Initial load and auto-refresh
-  fetchAndRenderAll();
-  setInterval(fetchAndRenderAll, 5000);
+  // --- Initial Load and Auto-Refresh ---
+  refreshDashboard();
+  setInterval(refreshDashboard, 5000);
 });
