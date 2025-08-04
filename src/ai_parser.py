@@ -7,10 +7,6 @@ from src.config import GEMINI_API_KEY
 
 
 def parse_quote_with_ai(email_body: str) -> Union[float, None]:
-    """
-    Uses the Gemini API via the genai.Client to parse the quote from an email body,
-    aligning with the official documentation.
-    """
     response = None
     clean_text = ""
     try:

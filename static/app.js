@@ -1,34 +1,39 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // DOM Elements
+  // --- DOM Elements ---
   const shipmentsTableBody = document.querySelector("#shipments-table tbody");
   const shipmentsEmptyState = document.getElementById("shipments-empty-state");
   const quotesTableBody = document.querySelector("#quotes-table tbody");
   const quotesEmptyState = document.getElementById("quotes-empty-state");
+  const editModal = document.getElementById("edit-modal");
+  const closeModalButton = document.querySelector(".close-button");
+  const editQuoteForm = document.getElementById("edit-quote-form");
   const totalShipmentsStat = document.getElementById("total-shipments-stat");
   const inProgressStat = document.getElementById("in-progress-stat");
   const totalSavingsStat = document.getElementById("total-savings-stat");
-  const form = document.getElementById("new-shipment-form");
-  const searchForm = document.getElementById("search-form");
-  const searchInput = document.getElementById("search-id");
+  const newShipmentForm = document.getElementById("new-shipment-form");
+  const filterForm = document.getElementById("filter-form");
   const detailsIdSpan = document.getElementById("details-id");
   const prevButton = document.getElementById("prev-button");
   const nextButton = document.getElementById("next-button");
   const pageSpan = document.getElementById("page-number");
 
-  // State
+  // --- State ---
   let allShipments = [];
   let currentPage = 1;
   let selectedShipmentId = null;
-  const DEFAULT_ROWS_PER_PAGE = 5;
-  let rowsPerPage = DEFAULT_ROWS_PER_PAGE;
+  const rowsPerPage = 5;
 
-  // --- Main Data Fetching and Rendering ---
-
+  // --- Core Functions ---
   async function refreshDashboard() {
     console.log("Refreshing dashboard data...");
-    // Fetch stats and shipments in parallel
-    await Promise.all([fetchStats(), fetchShipments()]);
-    // Re-render the table and quotes for the selected shipment
+    const filterParams = new URLSearchParams({
+      customer: document.getElementById("filter-customer").value,
+      so: document.getElementById("filter-so").value,
+      po: document.getElementById("filter-po").value,
+    }).toString();
+
+    await Promise.all([fetchStats(), fetchShipments(filterParams)]);
+
     renderShipmentsPage();
     if (selectedShipmentId) {
       fetchAndRenderQuotes(selectedShipmentId);
@@ -42,28 +47,23 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const stats = await response.json();
-
       totalShipmentsStat.textContent = stats.total_shipments;
       inProgressStat.textContent = stats.in_progress;
       totalSavingsStat.textContent = `$${stats.total_savings.toFixed(2)}`;
-      console.log("Stats loaded:", stats);
     } catch (error) {
       console.error("Failed to fetch stats:", error);
     }
   }
 
-  async function fetchShipments() {
+  async function fetchShipments(filterParams = "") {
     try {
-      const response = await fetch("/api/shipments");
+      const response = await fetch(`/api/shipments?${filterParams}`);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       allShipments = await response.json();
-      console.log(`Loaded ${allShipments.length} total shipments.`);
-
-      // Crucially, always render the page after fetching.
-      renderShipmentsPage();
     } catch (error) {
       console.error("Failed to fetch shipments:", error);
+      allShipments = [];
     }
   }
 
@@ -73,6 +73,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const end = start + rowsPerPage;
     const paginatedShipments = allShipments.slice(start, end);
 
+    if (allShipments.length === 0) {
+      shipmentsEmptyState.classList.add("visible");
+    } else {
+      shipmentsEmptyState.classList.remove("visible");
+    }
+
     paginatedShipments.forEach((s) => {
       const row = document.createElement("tr");
       row.id = `shipment-row-${s.shipment_id}`;
@@ -81,28 +87,69 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const statusCell = `
-                <td class="status-cell">
-                    <span class="status-dot ${s.status.toLowerCase()}"></span>
-                    <span>${s.status}</span>
-                </td>`;
+          <td>
+              <div class="status-cell">
+                  <span class="status-dot ${s.status.toLowerCase()}"></span>
+                  <span>${s.status}</span>
+              </div>
+          </td>`;
 
       row.innerHTML = `
                 <td>${s.shipment_id}</td>
+                <td>${s.customer_name || "N/A"}</td>
+                <td>${s.sales_order || "N/A"}</td>
+                <td>${s.purchase_order || "N/A"}</td>
                 ${statusCell}
                 <td>${s.final_winner || "N/A"}</td>
                 <td>${s.final_price ? "$" + s.final_price.toFixed(2) : "N/A"}</td>
-                <td>${s.spots}</td>
-                <td>${s.destination_zip}</td>
             `;
       row.addEventListener("click", () => {
         selectedShipmentId = s.shipment_id;
-        fetchAndRenderQuotes(s.shipment_id);
         renderShipmentsPage();
+        fetchAndRenderQuotes(s.shipment_id);
       });
       shipmentsTableBody.appendChild(row);
     });
 
     updatePaginationControls();
+  }
+
+  function openEditModal(quoteId, carrierName) {
+    document.getElementById("modal-quote-id").value = quoteId;
+    document.getElementById("modal-carrier-name").textContent = carrierName;
+    document.getElementById("modal-price").value = "";
+    editModal.classList.add("visible");
+  }
+
+  function closeEditModal() {
+    editModal.classList.remove("visible");
+  }
+
+  async function handleEditFormSubmit(event) {
+    event.preventDefault();
+    const quoteId = modalQuoteId.value;
+    const price = modalPriceInput.value;
+
+    try {
+      const response = await fetch("/api/quotes/manual_update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quote_id: parseInt(quoteId),
+          price: parseFloat(price),
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to update quote");
+
+      closeEditModal();
+      // Refresh the quotes to show the new price
+      if (selectedShipmentId) {
+        fetchAndRenderQuotes(selectedShipmentId);
+      }
+    } catch (error) {
+      console.error("Failed to submit manual quote:", error);
+      alert("Error: Could not save the new price.");
+    }
   }
 
   function updatePaginationControls() {
@@ -127,25 +174,69 @@ document.addEventListener("DOMContentLoaded", () => {
       quotes.forEach((q) => {
         const row = document.createElement("tr");
         const statusCell = `
-                    <td class="status-cell">
-                        <span class="status-dot ${q.status.toLowerCase()}"></span>
-                        <span>${q.status}</span>
-                    </td>`;
+            <td>
+                <div class="status-cell">
+                    <span class="status-dot ${q.status.toLowerCase()}"></span>
+                    <span>${q.status}</span>
+                </div>
+            </td>`;
         row.innerHTML = `
-                    <td>${q.carrier_name}</td>
-                    <td>${q.quote_type}</td>
-                    ${statusCell}
-                    <td>${q.price ? "$" + q.price.toFixed(2) : "N/A"}</td>
-                `;
+            <td>${q.carrier_name}</td>
+            <td>${q.quote_type}</td>
+            ${statusCell}
+            <td>${q.price ? "$" + q.price.toFixed(2) : "N/A"}</td>
+            <td><button class="edit-button" data-quote-id="${q.quote_id}" data-carrier-name="${q.carrier_name}">Edit</button></td>
+        `;
         quotesTableBody.appendChild(row);
       });
     }
   }
 
-  // --- (Event listeners for forms and buttons are unchanged) ---
-  form.addEventListener("submit", async (e) => {
+  quotesTableBody.addEventListener("click", (event) => {
+    if (event.target && event.target.classList.contains("edit-button")) {
+      const quoteId = event.target.dataset.quoteId;
+      const carrierName = event.target.dataset.carrierName;
+      openEditModal(quoteId, carrierName);
+    }
+  });
+
+  closeModalButton.addEventListener("click", closeEditModal);
+  window.addEventListener("click", (event) => {
+    if (event.target == editModal) {
+      closeEditModal();
+    }
+  });
+  editQuoteForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const quoteId = document.getElementById("modal-quote-id").value;
+    const price = document.getElementById("modal-price").value;
+
+    try {
+      const response = await fetch("/api/quotes/manual_update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quote_id: parseInt(quoteId),
+          price: parseFloat(price),
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to update quote");
+
+      closeEditModal();
+      if (selectedShipmentId) {
+        fetchAndRenderQuotes(selectedShipmentId);
+      }
+    } catch (error) {
+      console.error("Failed to submit manual quote:", error);
+      alert("Error: Could not save the new price.");
+    }
+  });
+  newShipmentForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const shipmentData = {
+      customer_name: document.getElementById("customer-name").value,
+      sales_order: document.getElementById("so-number").value,
+      purchase_order: document.getElementById("po-number").value,
       spots: document.getElementById("spots").value,
       weight: document.getElementById("weight").value,
       destination_zip: document.getElementById("zip").value,
@@ -155,28 +246,13 @@ document.addEventListener("DOMContentLoaded", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(shipmentData),
     });
-    form.reset();
+    newShipmentForm.reset();
     await refreshDashboard();
-    currentPage = 1;
-    renderShipmentsPage();
   });
 
-  searchForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const searchId = parseInt(searchInput.value, 10);
-    if (isNaN(searchId)) return;
-    const shipmentIndex = allShipments.findIndex(
-      (s) => s.shipment_id === searchId,
-    );
-    if (shipmentIndex === -1) {
-      alert(`Shipment ID #${searchId} not found.`);
-      return;
-    }
-    const targetPage = Math.floor(shipmentIndex / rowsPerPage) + 1;
-    currentPage = targetPage;
-    renderShipmentsPage();
-    await fetchAndRenderQuotes(searchId);
-    searchInput.value = "";
+  filterForm.addEventListener("input", () => {
+    currentPage = 1;
+    refreshDashboard();
   });
 
   prevButton.addEventListener("click", () => {
@@ -193,7 +269,6 @@ document.addEventListener("DOMContentLoaded", () => {
       renderShipmentsPage();
     }
   });
-
   // --- Initial Load and Auto-Refresh ---
   refreshDashboard();
   setInterval(refreshDashboard, 5000);

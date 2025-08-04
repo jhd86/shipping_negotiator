@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row # This allows accessing columns by name
+    conn.row_factory = sqlite3.Row
     return conn
 
 @app.route('/')
@@ -17,21 +17,42 @@ def index():
 
 @app.route('/api/shipments', methods=['GET'])
 def get_shipments():
-    """API endpoint to get all shipments."""
+    """API endpoint to get all shipments, with filtering."""
     conn = get_db_connection()
-    shipments = conn.execute('SELECT * FROM shipments ORDER BY shipment_id DESC').fetchall()
+
+    query = 'SELECT * FROM shipments'
+    filters = []
+    params = {}
+
+    if request.args.get('so'):
+        filters.append('sales_order LIKE :so')
+        params['so'] = f"%{request.args.get('so')}%"
+    if request.args.get('po'):
+        filters.append('purchase_order LIKE :po')
+        params['po'] = f"%{request.args.get('po')}%"
+    if request.args.get('customer'):
+        filters.append('customer_name LIKE :customer')
+        params['customer'] = f"%{request.args.get('customer')}%"
+
+    if filters:
+        query += ' WHERE ' + ' AND '.join(filters)
+
+    query += ' ORDER BY shipment_id DESC'
+
+    shipments = conn.execute(query, params).fetchall()
     conn.close()
     return jsonify([dict(row) for row in shipments])
 
 @app.route('/api/shipments', methods=['POST'])
 def add_shipment():
-    """API endpoint to log a new shipment."""
+    """API endpoint to log a new shipment with new fields."""
     data = request.json
     try:
         conn = get_db_connection()
         conn.execute(
-            "INSERT INTO shipments (request_date, spots, weight, destination_zip, status) VALUES (?, ?, ?, ?, ?)",
-            (datetime.now().isoformat(), data['spots'], data['weight'], data['destination_zip'], 'quoting')
+            """INSERT INTO shipments (request_date, spots, weight, destination_zip, status, sales_order, purchase_order, customer_name)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (datetime.now().isoformat(), data['spots'], data['weight'], data['destination_zip'], 'quoting', data['sales_order'], data['purchase_order'], data['customer_name'])
         )
         conn.commit()
         conn.close()
@@ -47,15 +68,40 @@ def get_quotes(shipment_id):
     conn.close()
     return jsonify([dict(row) for row in quotes])
 
+@app.route('/api/quotes/manual_update', methods=['POST'])
+def manual_quote_update():
+    """API endpoint to manually update a quote's price."""
+    data = request.json
+    quote_id = data.get('quote_id')
+    price = data.get('price')
+
+    if not quote_id or price is None:
+        return jsonify({"success": False, "message": "Missing quote_id or price."}), 400
+
+    try:
+        conn = get_db_connection()
+        # Find the quote to get the shipment_id for status checking later
+        quote = conn.execute('SELECT shipment_id FROM quotes WHERE quote_id = ?', (quote_id,)).fetchone()
+        if not quote:
+            conn.close()
+            return jsonify({"success": False, "message": "Quote not found."}), 404
+
+        conn.execute(
+            "UPDATE quotes SET price = ?, status = 'received', received_at = ? WHERE quote_id = ?",
+            (price, datetime.now().isoformat(), quote_id)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "message": "Quote updated successfully."})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     """API endpoint to get dashboard summary statistics."""
     conn = get_db_connection()
     total_shipments = conn.execute('SELECT COUNT(*) FROM shipments').fetchone()[0]
     in_progress = conn.execute("SELECT COUNT(*) FROM shipments WHERE status NOT IN ('complete', 'failed')").fetchone()[0]
-
-    # Calculate savings from completed shipments
-    completed = conn.execute("SELECT final_price FROM shipments WHERE status = 'complete' AND final_price IS NOT NULL").fetchall()
 
     total_savings = 0
     # Find all completed shipments that have a final price
