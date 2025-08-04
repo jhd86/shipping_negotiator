@@ -2,7 +2,6 @@ import sqlite3
 import os
 import sys
 
-# --- NEW: Reliable path logic for packaged apps ---
 def get_base_path():
     """Gets the base path, whether running from source or as a bundled app."""
     if getattr(sys, 'frozen', False):
@@ -27,7 +26,6 @@ def create_database():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    # (Your CREATE TABLE statements remain unchanged)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS shipments (
         shipment_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +35,10 @@ def create_database():
         destination_zip TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending',
         final_winner TEXT,
-        final_price REAL
+        final_price REAL,
+        sales_order TEXT,
+        purchase_order TEXT,
+        customer_name TEXT
     );
     """)
     cursor.execute("""

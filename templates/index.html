@@ -17,6 +17,23 @@
                         <h3>Log a New Shipment</h3>
                         <form id="new-shipment-form">
                             <input
+                                type="text"
+                                id="customer-name"
+                                placeholder="Customer Name"
+                                required
+                            />
+                            <input
+                                type="text"
+                                id="so-number"
+                                placeholder="Sales Order #"
+                                required
+                            />
+                            <input
+                                type="text"
+                                id="po-number"
+                                placeholder="Purchase Order #"
+                            />
+                            <input
                                 type="number"
                                 id="spots"
                                 placeholder="Spots"
@@ -39,13 +56,22 @@
                         </form>
                     </div>
                     <div class="action-section">
-                        <h3>Find a Shipment</h3>
-                        <form id="search-form">
+                        <h3>Filter Shipments</h3>
+                        <form id="filter-form">
                             <input
-                                type="number"
-                                id="search-id"
-                                placeholder="Enter Shipment ID..."
-                                required
+                                type="text"
+                                id="filter-customer"
+                                placeholder="Filter by Customer..."
+                            />
+                            <input
+                                type="text"
+                                id="filter-so"
+                                placeholder="Filter by SO..."
+                            />
+                            <input
+                                type="text"
+                                id="filter-po"
+                                placeholder="Filter by PO..."
                             />
                             <button type="submit">Search</button>
                         </form>
@@ -76,15 +102,21 @@
                                 <thead>
                                     <tr>
                                         <th>ID</th>
+                                        <th>Customer</th>
+                                        <th>SO #</th>
+                                        <th>PO #</th>
                                         <th>Status</th>
                                         <th>Final Winner</th>
                                         <th>Final Price</th>
-                                        <th>Spots</th>
-                                        <th>ZIP</th>
+                                        <!-- <th>Spots</th> -->
+                                        <!-- <th>ZIP</th> -->
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
+                            <div id="shipments-empty-state" class="empty-state">
+                                <p>No shipments found.</p>
+                            </div>
                         </div>
                         <div class="pagination-controls">
                             <button id="prev-button">Previous</button>
@@ -107,6 +139,7 @@
                                         <th>Type</th>
                                         <th>Status</th>
                                         <th>Price</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -117,6 +150,27 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+        <div id="edit-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h3>Edit Quote</h3>
+                <p>
+                    Manually enter or correct the price for
+                    <strong id="modal-carrier-name"></strong>.
+                </p>
+                <form id="edit-quote-form">
+                    <input type="hidden" id="modal-quote-id" />
+                    <input
+                        type="number"
+                        id="modal-price"
+                        placeholder="Enter new price"
+                        step="0.01"
+                        required
+                    />
+                    <button type="submit">Save Price</button>
+                </form>
             </div>
         </div>
         <script src="/static/app.js"></script>
