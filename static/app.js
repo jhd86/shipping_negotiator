@@ -125,33 +125,6 @@ document.addEventListener("DOMContentLoaded", () => {
     editModal.classList.remove("visible");
   }
 
-  async function handleEditFormSubmit(event) {
-    event.preventDefault();
-    const quoteId = modalQuoteId.value;
-    const price = modalPriceInput.value;
-
-    try {
-      const response = await fetch("/api/quotes/manual_update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quote_id: parseInt(quoteId),
-          price: parseFloat(price),
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to update quote");
-
-      closeEditModal();
-      // Refresh the quotes to show the new price
-      if (selectedShipmentId) {
-        fetchAndRenderQuotes(selectedShipmentId);
-      }
-    } catch (error) {
-      console.error("Failed to submit manual quote:", error);
-      alert("Error: Could not save the new price.");
-    }
-  }
-
   function updatePaginationControls() {
     const totalPages = Math.ceil(allShipments.length / rowsPerPage);
     pageSpan.textContent = `Page ${currentPage} of ${totalPages || 1}`;
@@ -190,22 +163,36 @@ document.addEventListener("DOMContentLoaded", () => {
         quotesTableBody.appendChild(row);
       });
     }
+    const shipment = allShipments.find((s) => s.shipment_id === shipmentId);
+    if (!shipment) return;
   }
 
-  quotesTableBody.addEventListener("click", (event) => {
-    if (event.target && event.target.classList.contains("edit-button")) {
-      const quoteId = event.target.dataset.quoteId;
-      const carrierName = event.target.dataset.carrierName;
-      openEditModal(quoteId, carrierName);
-    }
+  // --- Event Listeners ---
+  newShipmentForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const shipmentData = {
+      customer_name: document.getElementById("customer-name").value,
+      sales_order: document.getElementById("so-number").value,
+      purchase_order: document.getElementById("po-number").value,
+      spots: document.getElementById("spots").value,
+      weight: document.getElementById("weight").value,
+      dimensions: document.getElementById("dimensions").value,
+      destination_zip: document.getElementById("zip").value,
+    };
+    await fetch("/api/shipments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(shipmentData),
+    });
+    newShipmentForm.reset();
+    await refreshDashboard();
   });
 
-  closeModalButton.addEventListener("click", closeEditModal);
-  window.addEventListener("click", (event) => {
-    if (event.target == editModal) {
-      closeEditModal();
-    }
+  filterForm.addEventListener("input", () => {
+    currentPage = 1;
+    refreshDashboard();
   });
+
   editQuoteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const quoteId = document.getElementById("modal-quote-id").value;
@@ -231,28 +218,23 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Error: Could not save the new price.");
     }
   });
-  newShipmentForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const shipmentData = {
-      customer_name: document.getElementById("customer-name").value,
-      sales_order: document.getElementById("so-number").value,
-      purchase_order: document.getElementById("po-number").value,
-      spots: document.getElementById("spots").value,
-      weight: document.getElementById("weight").value,
-      destination_zip: document.getElementById("zip").value,
-    };
-    await fetch("/api/shipments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(shipmentData),
-    });
-    newShipmentForm.reset();
-    await refreshDashboard();
-  });
 
   filterForm.addEventListener("input", () => {
     currentPage = 1;
     refreshDashboard();
+  });
+
+  closeModalButton.forEach((button) => {
+    button.addEventListener("click", () => {
+      editModal.classList.remove("visible");
+      emailModal.classList.remove("visible");
+    });
+  });
+
+  window.addEventListener("click", (event) => {
+    if (event.target == editModal) {
+      editModal.classList.remove("visible");
+    }
   });
 
   prevButton.addEventListener("click", () => {
@@ -269,6 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderShipmentsPage();
     }
   });
+
   // --- Initial Load and Auto-Refresh ---
   refreshDashboard();
   setInterval(refreshDashboard, 5000);

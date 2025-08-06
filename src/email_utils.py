@@ -11,6 +11,7 @@ Hello,
 Please provide a quote for the following shipment:
 - Pallets (Spots): {shipment_details['spots']}
 - Weight (lbs): {shipment_details['weight']}
+- Dimensions: {shipment_details['dimensions']}
 - Destination ZIP: {shipment_details['destination_zip']}
 
 Please reply with your best quote for this shipment.

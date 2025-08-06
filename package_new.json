@@ -1,0 +1,46 @@
+{
+  "name": "shipping-negotiator",
+  "version": "1.0.0",
+  "description": "A desktop app for negotiating shipping quotes.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "electron-fetch": "^1.9.1"
+  },
+  "build": {
+    "appId": "com.yourcompany.shippingnegotiator",
+    "productName": "Shipping Negotiator",
+    "files": ["main.js", "preload.js", "templates/", "static/"],
+    "extraResources": [
+      {
+        "from": "./",
+        "to": "./",
+        "filter": [
+          "worker.py",
+          "app.py",
+          "run_app.sh",
+          "Procfile",
+          "requirements.txt",
+          "src/",
+          "data/"
+        ]
+      }
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}

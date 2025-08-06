@@ -1,6 +1,6 @@
 import sqlite3
 import time
-# from datetime import datetime
+from datetime import datetime
 
 # Import all the necessary functions from your utility files
 from src.database_setup import DB_PATH
@@ -16,18 +16,17 @@ def get_db_connection():
 def start_new_shipments(conn):
     """Finds shipments with status 'quoting' and starts the process."""
     cursor = conn.cursor()
-    cursor.execute("SELECT shipment_id, spots, weight, destination_zip FROM shipments WHERE status = 'quoting'")
+    cursor.execute("SELECT * FROM shipments WHERE status = 'quoting'")
     new_shipments = cursor.fetchall()
 
     for shipment in new_shipments:
-        shipment_id, spots, weight, destination_zip = shipment
+        shipment_id = shipment['shipment_id']
         print(f"WORKER: Found new shipment #{shipment_id}. Locking and starting quote process...")
 
-        # --- BUG FIX: Immediately lock the shipment to prevent reprocessing ---
         cursor.execute("UPDATE shipments SET status = 'processing_initial' WHERE shipment_id = ?", (shipment_id,))
         conn.commit()
 
-        shipment_details = {'shipment_id': shipment_id, 'spots': spots, 'weight': weight, 'destination_zip': destination_zip}
+        shipment_details = dict(shipment)
 
         for name, info in CARRIERS.items():
             cursor.execute("INSERT INTO quotes (shipment_id, carrier_name, quote_type) VALUES (?, ?, ?)", (shipment_id, name, 'initial'))
@@ -45,16 +44,14 @@ def advance_to_negotiation(conn):
     """
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT s.shipment_id, s.spots, s.weight, s.destination_zip
+        SELECT s.shipment_id
         FROM shipments s
         WHERE s.status = 'awaiting_initial_quotes' AND
               (SELECT COUNT(*) FROM quotes q WHERE q.shipment_id = s.shipment_id AND q.quote_type = 'initial' AND q.status IN ('received', 'failed')) = ?
     """, (len(CARRIERS),))
     ready_shipments = cursor.fetchall()
 
-    for shipment in ready_shipments:
-        shipment_id, spots, weight, destination_zip = shipment
-
+    for (shipment_id,) in ready_shipments:
         cursor.execute("SELECT carrier_name, price FROM quotes WHERE shipment_id = ? AND quote_type = 'initial' AND status = 'received' ORDER BY price ASC LIMIT 1", (shipment_id,))
         result = cursor.fetchone()
 

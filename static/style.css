@@ -163,11 +163,13 @@ tbody tr.selected-row {
     border-radius: 50%;
 }
 
-.status-dot.complete {
+.status-dot.complete,
+.status-dot.received {
     background-color: var(--status-complete);
 }
 .status-dot.quoting,
-.status-dot.received,
+.status-dot.pending,
+.status-dot.processing_initial,
 .status-dot.awaiting_initial_quotes,
 .status-dot.awaiting_final_offers,
 .status-dot.negotiating {

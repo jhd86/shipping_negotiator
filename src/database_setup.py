@@ -38,7 +38,8 @@ def create_database():
         final_price REAL,
         sales_order TEXT,
         purchase_order TEXT,
-        customer_name TEXT
+        customer_name TEXT,
+        dimensions TEXT NOT NULL
     );
     """)
     cursor.execute("""

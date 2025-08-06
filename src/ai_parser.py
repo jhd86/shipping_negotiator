@@ -31,7 +31,7 @@ def parse_quote_with_ai(email_body: str) -> Union[float, None]:
             model="models/gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
-                    thinking_config=types.ThinkingConfig(thinking_budget=0)
+                    thinking_config=types.ThinkingConfig(thinking_budget=50)
             ),
         )
         if response and response.text:
